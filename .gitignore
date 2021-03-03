@@ -1,0 +1,20 @@
+﻿# Compiled source #
+###################
+.idea/
+*.config
+bin
+packages
+obj
+.vs
+.vscode
+*.suo
+*.dll
+*.pdb
+*.exe
+*.user
+*.TestConsole
+.rdl.data
+.idea
+*.dbmdl
+*.csproj.user
+/Build
