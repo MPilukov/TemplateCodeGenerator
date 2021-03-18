@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace TemplateCodeGenerator
 {
@@ -29,7 +30,7 @@ namespace TemplateCodeGenerator
 
         private static void Generate(string methodName, string controllerPath, string description, bool isQuery, string slnName, string rootFolder)
         {
-            var controllerText = File.ReadAllText(controllerPath);
+            var controllerText = File.ReadAllText(controllerPath, Encoding.UTF8);
 
             var postfixNamespace = GetPostfixNamespace(controllerText);
             var postfixNamespaceArray = postfixNamespace.Split(".").ToList();
@@ -101,17 +102,24 @@ namespace TemplateCodeGenerator
             lastIdx = newFileText.LastIndexOf("}");
             newFileText = newFileText.Substring(0, lastIdx);
             
-            lastIdx = newFileText.LastIndexOf("}");
+            var lastIdxFirst = newFileText.LastIndexOf("}");
+            var lastIdxSecond = newFileText.LastIndexOf(";");
+
+            lastIdx = lastIdxFirst < lastIdxSecond ? lastIdxFirst : lastIdxSecond;
             newFileText = newFileText.Substring(0, lastIdx + 1);
 
             var firstUsing = @$"using {allNamespace};
 ";
             newFileText = $"{firstUsing}{newFileText}{Replace(NewMethodConstant.NewMethodInController, replacers)}";
             
-            using (var sw = File.CreateText(controllerPath))
+            using (var sw  = new StreamWriter(File.Open(controllerPath, FileMode.Truncate), Encoding.UTF8)) 
             {
-                sw.WriteLine(newFileText);
+                sw.WriteLine(newFileText);             
             }
+            // using (var sw = File.CreateText(controllerPath))
+            // {
+            //     sw.WriteLine(newFileText);
+            // }
         }
 
         private static void CreateFolder(string folder)
@@ -136,15 +144,20 @@ namespace TemplateCodeGenerator
             var fileNames = Directory.GetFiles(fromFolder);
             foreach (var fileName in fileNames)
             {
-                var filText = File.ReadAllText(fileName);
+                var filText = File.ReadAllText(fileName, Encoding.UTF8);
                 
                 var newFileName = Replace(Path.GetFileName(fileName), replacers);
                 var newFileText= Replace(filText, replacers);
-                
-                using (var sw = File.CreateText($"{toFolder}\\{newFileName}"))
+
+                using (var sw  = new StreamWriter(File.Open($"{toFolder}\\{newFileName}", FileMode.OpenOrCreate), Encoding.UTF8)) 
                 {
-                    sw.WriteLine(newFileText);
+                    sw.WriteLine(newFileText);             
                 }
+                
+                // using (var sw = File.CreateText($"{toFolder}\\{newFileName}"))
+                // {
+                //     sw.WriteLine(newFileText);
+                // }
             }
         }
 
