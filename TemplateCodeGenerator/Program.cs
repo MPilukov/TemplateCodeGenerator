@@ -30,12 +30,21 @@ namespace TemplateCodeGenerator
             Console.WriteLine("It is query ? (y/n) :");
             var isQueryLine = Console.ReadLine();
             var isQuery = string.IsNullOrEmpty(isQueryLine) || isQueryLine.Equals("y");
+
+            var isContainsResponse = true;
+            if (!isQuery)
+            {
+                Console.WriteLine("Is is command with response (y/n) ? ");
+
+                var isContainsResponseLine = Console.ReadLine();
+                isContainsResponse = string.IsNullOrEmpty(isContainsResponseLine) || isContainsResponseLine.Equals("y");
+            }
             
-            Console.WriteLine("Method for (добавления событий мониторинга) : ");
+            Console.WriteLine("Write description for method (добавления событий мониторинга) : ");
             var description = Console.ReadLine();
 
             var generator = new NewMethodGenerator();
-            NewMethodGenerator.Generate(controllerPath, methodName, isQuery, description);
+            NewMethodGenerator.Generate(controllerPath, methodName, isQuery, isContainsResponse, description);
         }
     }
 }
