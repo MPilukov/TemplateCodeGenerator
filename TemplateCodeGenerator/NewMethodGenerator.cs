@@ -1,13 +1,36 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using BaseNamespace;
 
 namespace TemplateCodeGenerator
 {
+    /// <summary>
+    /// Генератор нового апи-метода
+    /// </summary>
     public class NewMethodGenerator
     {
-        public static void Generate(string controllerPath, string methodName, bool isQuery, string description)
+        /// <summary>
+        /// Сгенерировать новый метод для апи и зависимые контракты
+        /// </summary>
+        /// <param name="controllerPath">Абсолютный путь к файлу-контроллеру</param>
+        /// <param name="methodName">Имя метода</param>
+        /// <param name="url">Урл внутри контроллера</param>
+        /// <param name="methodHttpType">Http-тип метода</param>
+        /// <param name="isQuery">Это запрос (или команда)</param>
+        /// <param name="isContainsResponse">Метод содержить ответ (или без ответа)</param>
+        /// <param name="russianDescription">Описание метода на русском языке (постфикс описания)</param>
+        public static void Generate(string controllerPath, string url, string methodHttpType, string methodName, bool isQuery, bool isContainsResponse, string russianDescription)
+        {
+            var (slnName, rootFolder) = GetSlnData(controllerPath);
+            var methodNameWithoutAsync = methodName.EndsWith("Async") ? methodName.Remove(methodName.Length - 5, 5) : methodName;
+
+            Generate(controllerPath, methodNameWithoutAsync, url, methodHttpType, isQuery, isContainsResponse, russianDescription, slnName, rootFolder);
+        }
+
+        private static (string, string) GetSlnData(string controllerPath)
         {
             var pathParts = controllerPath.Split("\\");
             var slnName = "";
@@ -22,53 +45,73 @@ namespace TemplateCodeGenerator
                     rootFolder = controllerPath.Substring(0, controllerPath.IndexOf(apiSln));
                 }
             }
-
-            var methodNameWithoutAsync = methodName.EndsWith("Async") ? methodName.Remove(methodName.Length - 5, 5) : methodName;
-
-            Generate(methodNameWithoutAsync, controllerPath, description, isQuery, slnName, rootFolder);
-        }
-
-        private static void Generate(string methodName, string controllerPath, string description, bool isQuery, string slnName, string rootFolder)
-        {
-            var controllerText = File.ReadAllText(controllerPath, Encoding.UTF8);
-
-            var postfixNamespace = GetPostfixNamespace(controllerText);
-            var postfixNamespaceArray = postfixNamespace.Split(".").ToList();
-            postfixNamespaceArray.Add(methodName);
-
-            var appBaseFolder = $"{rootFolder}{slnName}.Application";
-            var appNamespace = $"{slnName}.Application";
             
-            foreach (var postfixNamespacePart in postfixNamespaceArray)
-            {
-                appBaseFolder = $"{appBaseFolder}\\{postfixNamespacePart}";
-                appNamespace = $"{appNamespace}.{postfixNamespacePart}";
-                CreateFolder(appBaseFolder);
-            }
-
-            var replacers = GetReplacers(isQuery, description, methodName, appNamespace);
-            ReplaceControllerText(controllerPath, controllerText, appNamespace, replacers);
-            CopyModels(appBaseFolder, $"{Directory.GetCurrentDirectory()}\\ApplicationModels", replacers);
-
-            // 1. добавить метод в controller
-            // 2. создать модели
-            //      запроса/команды
-            //      ответа
-            //      валидатора
-            //      хендлера
-            // 3. тесты
-            //      валидатора
-            //      хендлера
+            return (slnName, rootFolder);
         }
 
         /// <summary>
-        /// <see cref=""/>
+        /// Сгенерировать новый метод для апи и зависимые файлы
         /// </summary>
-        /// <param name="isQuery"></param>
-        /// <param name="description"></param>
-        /// <param name="methodName"></param>
+        /// <param name="controllerPath">Абсолютный путь к файлу-контроллеру</param>
+        /// <param name="methodName">Имя метода</param>
+        /// <param name="url">Урл внутри контроллера</param>
+        /// <param name="methodHttpType">Http-тип метода</param>
+        /// <param name="isQuery">Это запрос (или команда)</param>
+        /// <param name="isContainsResponse">Метод содержить ответ (или без ответа)</param>
+        /// <param name="russianDescription">Описание метода на русском языке (постфикс описания)</param>
+        /// <param name="slnName">Имя проекта</param>
+        /// <param name="rootFolder">Корневая папка проекта</param>
+        private static void Generate(
+            string controllerPath,
+            string methodName,
+            string url,
+            string methodHttpType,
+            bool isQuery,
+            bool isContainsResponse,
+            string russianDescription,
+            string slnName,
+            string rootFolder)
+        {
+            var controllerText = File.ReadAllText(controllerPath, Encoding.UTF8);
+
+            var postfixNamespace = GetPostfixNamespaceForController(controllerText);
+            var postfixNamespaceArray = postfixNamespace.Split(".").ToList();
+            postfixNamespaceArray.Add(methodName);
+
+            var applicationBaseFolder = $"{rootFolder}{slnName}.Application";
+            var applicationNamespace = $"{slnName}.Application";
+            
+            foreach (var postfixNamespacePart in postfixNamespaceArray)
+            {
+                applicationBaseFolder = $"{applicationBaseFolder}\\{postfixNamespacePart}";
+                applicationNamespace = $"{applicationNamespace}.{postfixNamespacePart}";
+                CreateFolder(applicationBaseFolder);
+            }
+
+            var replacers = GetReplacers(methodName, url, isQuery, russianDescription, applicationNamespace);
+
+            AddMethodToControllerText(controllerPath, controllerText, methodHttpType, isContainsResponse, applicationNamespace, replacers);
+
+            var currentDirectory = Directory.GetCurrentDirectory();
+            CopyModels(applicationBaseFolder,
+                isContainsResponse
+                    ? $"{currentDirectory}\\ApplicationModels\\WithResponse"
+                    : $"{currentDirectory}\\ApplicationModels\\WithoutResponse", replacers);
+            CopyModels(applicationBaseFolder, $"{currentDirectory}\\ApplicationModels\\Validators", replacers);
+
+            // todo: application tests
+        }
+
+        /// <summary>
+        /// Получить словарь базовых замен 
+        /// </summary>
+        /// <param name="methodName">Имя метода</param>
+        /// <param name="url">Урл внутри контроллера</param>
+        /// <param name="isQuery">Это запрос (или команда)</param>
+        /// <param name="russianDescription">Описание метода на русском языке (постфикс описания)</param>
+        /// <param name="baseNamespace">Базовый неймспей</param>
         /// <returns></returns>
-        private static Dictionary<string, string> GetReplacers(bool isQuery, string description, string methodName, string allNamespace)
+        private static Dictionary<string, string> GetReplacers(string methodName, string url, bool isQuery, string russianDescription, string baseNamespace)
         {
             var request = isQuery ? $"{methodName}Query" : $"{methodName}Command";
             var response = isQuery ? $"{methodName}Response" : $"{methodName}Result";
@@ -76,61 +119,87 @@ namespace TemplateCodeGenerator
 
             return new Dictionary<string, string>
             {
-                {"BaseDescriptionMethod", description},
-                {"BaseNameMethod", methodName},
+                {"BaseDescriptionMethod", russianDescription},
+                {NewMethodConstants.BaseNameMethodTemplate, methodName},
+                // {"BaseNameMethod", methodName},
                 
-                {"BaseNamespace", allNamespace},
-                {"baseQueryName", isQuery ? "query" : "command"},
+                {"BaseNamespace", baseNamespace},
+                {".WithoutResponseNamespace", ""},
+                {"BaseQueryName", isQuery ? "query" : "command"},
                 
-                {"BaseHandler", $"{methodName}Handler"},
-                {"BaseQueryModel", request},
-                {"BaseResponseModel", response},
-                {"BaseQueryValidator", $"{request}Validator"},
+                {nameof(BaseHandler), $"{methodName}Handler"},
+                {nameof(BaseQueryModel), request},
+                {nameof(BaseResponseModel), response},
+                {nameof(BaseQueryValidator), $"{request}Validator"},
                 
                 {"BaseDescriptionResponsePrefix", $"Результат"},
                 {"BaseDescriptionQueryPrefix", descriptionQueryPrefix},
+                
+                {NewMethodConstants.BaseUriAddressTemplate, url},
             };
         }
 
-        private static void ReplaceControllerText(string controllerPath, string controllerText, string allNamespace, Dictionary<string, string> replacers)
+        private static void AddMethodToControllerText(
+            string controllerPath, string controllerText, string methodHttpType, 
+            bool isContainsResponse, string applicationNamespace, Dictionary<string, string> replacers)
         {
             var newFileText = controllerText.Clone().ToString() ?? "";
             
-            var lastIdx = newFileText.LastIndexOf("}");
-            newFileText = newFileText.Substring(0, lastIdx);
+            var lastCloseBracketIdx = newFileText.LastIndexOf("}");
+            newFileText = newFileText.Substring(0, lastCloseBracketIdx);
             
-            lastIdx = newFileText.LastIndexOf("}");
-            newFileText = newFileText.Substring(0, lastIdx);
+            lastCloseBracketIdx = newFileText.LastIndexOf("}");
+            newFileText = newFileText.Substring(0, lastCloseBracketIdx);
             
-            var lastIdxFirst = newFileText.LastIndexOf("}");
-            var lastIdxSecond = newFileText.LastIndexOf(";");
+            lastCloseBracketIdx = newFileText.LastIndexOf("}");
+            var lastSemicolonIdx = newFileText.LastIndexOf(";");
 
-            lastIdx = lastIdxFirst < lastIdxSecond ? lastIdxFirst : lastIdxSecond;
+            var lastIdx = lastCloseBracketIdx > lastSemicolonIdx ? lastCloseBracketIdx : lastSemicolonIdx;
             newFileText = newFileText.Substring(0, lastIdx + 1);
 
-            var firstUsing = @$"using {allNamespace};
+            var firstUsing = @$"using {applicationNamespace};
 ";
-            newFileText = $"{firstUsing}{newFileText}{Replace(NewMethodConstant.NewMethodInController, replacers)}";
+            var textOfMethodInController = GetTextOfMethodInController(methodHttpType, isContainsResponse, replacers);
+
+            newFileText = $"{firstUsing}{newFileText}{textOfMethodInController}";
             
             using (var sw  = new StreamWriter(File.Open(controllerPath, FileMode.Truncate), Encoding.UTF8)) 
             {
                 sw.WriteLine(newFileText);             
             }
-            // using (var sw = File.CreateText(controllerPath))
-            // {
-            //     sw.WriteLine(newFileText);
-            // }
         }
 
-        private static void CreateFolder(string folder)
+        private static string GetTextOfMethodInController(
+            string methodHttpType, bool isContainsResponse, Dictionary<string, string> replacers)
         {
-            if (!Directory.Exists(folder))
+            var textOfTemplateInController = "";
+
+            switch (methodHttpType.ToUpper())
             {
-                Directory.CreateDirectory(folder);
+                case "POST":
+                    textOfTemplateInController = isContainsResponse
+                        ? NewMethodConstants.NewPostMethodTemplateInController
+                        : NewMethodConstants.NewPostWithoutResponseMethodTemplateInController;
+                    break;
+                case "GET":
+                    textOfTemplateInController = NewMethodConstants.NewGetMethodTemplateInController;
+                    break;
+                case "DELETE":
+                    textOfTemplateInController = NewMethodConstants.NewDeleteMethodTemplateInController;
+                    break;
+                default:
+                    throw new Exception($"Тип {methodHttpType} не поддерживается");
             }
+
+            return Replace(textOfTemplateInController, replacers);
         }
 
-        private static string GetPostfixNamespace(string controllerText)
+        /// <summary>
+        /// Получить продолжение неймспейса контроллера
+        /// </summary>
+        /// <param name="controllerText"></param>
+        /// <returns></returns>
+        private static string GetPostfixNamespaceForController(string controllerText)
         {
             const string separator = ".Controllers.";
             var startIdx = controllerText.IndexOf(separator) + separator.Length;
@@ -139,25 +208,26 @@ namespace TemplateCodeGenerator
             return controllerText.Substring(startIdx, endIdx - startIdx).Replace("\r\n", "");
         }
 
+        /// <summary>
+        /// Скопировать необходимые модели для методв
+        /// </summary>
+        /// <param name="toFolder">Папка-источник</param>
+        /// <param name="fromFolder">Папка-цель</param>
+        /// <param name="replacers">Словарь с заменами</param>
         private static void CopyModels(string toFolder, string fromFolder, Dictionary<string, string> replacers)
         {
             var fileNames = Directory.GetFiles(fromFolder);
             foreach (var fileName in fileNames)
             {
-                var filText = File.ReadAllText(fileName, Encoding.UTF8);
+                var fileText = File.ReadAllText(fileName, Encoding.UTF8);
                 
                 var newFileName = Replace(Path.GetFileName(fileName), replacers);
-                var newFileText= Replace(filText, replacers);
+                var newFileText= Replace(fileText, replacers);
 
                 using (var sw  = new StreamWriter(File.Open($"{toFolder}\\{newFileName}", FileMode.OpenOrCreate), Encoding.UTF8)) 
                 {
                     sw.WriteLine(newFileText);             
                 }
-                
-                // using (var sw = File.CreateText($"{toFolder}\\{newFileName}"))
-                // {
-                //     sw.WriteLine(newFileText);
-                // }
             }
         }
 
@@ -171,6 +241,14 @@ namespace TemplateCodeGenerator
             }
 
             return textClone;
+        }
+
+        private static void CreateFolder(string folder)
+        {
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
         }
     }
 }

@@ -11,16 +11,22 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Update="ApplicationModels\BaseHandler.cs">
+      <Compile Update="ApplicationModels\Validators\BaseQueryValidator.cs">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Compile>
-      <Compile Update="ApplicationModels\BaseQueryModel.cs">
+      <Compile Update="ApplicationModels\WithResponse\BaseHandler.cs">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Compile>
-      <Compile Update="ApplicationModels\BaseQueryValidator.cs">
+      <Compile Update="ApplicationModels\WithResponse\BaseQueryModel.cs">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Compile>
-      <Compile Update="ApplicationModels\BaseResponseModel.cs">
+      <Compile Update="ApplicationModels\WithResponse\BaseResponseModel.cs">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Compile>
+      <Compile Update="ApplicationModels\WithoutResponse\BaseHandler.cs">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Compile>
+      <Compile Update="ApplicationModels\WithoutResponse\BaseQueryModel.cs">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Compile>
     </ItemGroup>

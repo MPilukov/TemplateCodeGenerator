@@ -21,21 +21,46 @@ namespace TemplateCodeGenerator
 
         private static void GenerateNewMethodInController()
         {
-            Console.WriteLine("Write controller file path : ");
+            Console.WriteLine("Write controller file full path : ");
             var controllerPath = Console.ReadLine();
             
             Console.WriteLine("Write new method name (RecalculationMonitoringOperationsByEndDateAsync) : ");
             var methodName = Console.ReadLine();
             
+            Console.WriteLine("Choose an method type (post, get, delete) : ");
+            var methodHttpType = Console.ReadLine();
+            
+            Console.WriteLine("Write uri in controller (\"notification-recipient-role\") : ");
+            var url = Console.ReadLine();
+            
             Console.WriteLine("It is query ? (y/n) :");
             var isQueryLine = Console.ReadLine();
             var isQuery = string.IsNullOrEmpty(isQueryLine) || isQueryLine.Equals("y");
+
+            var isContainsResponse = true;
+            if (isQuery)
+            {
+                isContainsResponse = true;
+            }
+            else
+            {
+                if ((methodHttpType ?? "").Equals("delete"))
+                {
+                    isContainsResponse = false;
+                }
+                else
+                {
+                    Console.WriteLine("Is is command with response (y/n) ? ");
+
+                    var isContainsResponseLine = Console.ReadLine();
+                    isContainsResponse = string.IsNullOrEmpty(isContainsResponseLine) || isContainsResponseLine.Equals("y");
+                }
+            }
             
-            Console.WriteLine("Method for (добавления событий мониторинга) : ");
+            Console.WriteLine("Write description for method (добавления событий мониторинга) : ");
             var description = Console.ReadLine();
 
-            var generator = new NewMethodGenerator();
-            NewMethodGenerator.Generate(controllerPath, methodName, isQuery, description);
+            NewMethodGenerator.Generate(controllerPath, url, methodHttpType, methodName, isQuery, isContainsResponse, description);
         }
     }
 }

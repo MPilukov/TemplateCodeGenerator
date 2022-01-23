@@ -16,13 +16,8 @@ namespace BaseNamespace
         {
         }
 
-        /// <summary>
-        /// Метод-обработчик для BaseDescriptionMethod
-        /// </summary>
-        /// <param name="baseQueryName"><see cref="BaseQueryModel"/></param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
-        /// <returns><see cref="BaseResponseModel"/></returns>
-        public async Task<BaseResponseModel> Handle(BaseQueryModel baseQueryName, CancellationToken cancellationToken)
+        /// <inheritdoc />
+        public async Task<BaseResponseModel> Handle(BaseQueryModel BaseQueryName, CancellationToken cancellationToken)
         {
             return new BaseResponseModel { };
         }
