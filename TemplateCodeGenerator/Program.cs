@@ -38,16 +38,23 @@ namespace TemplateCodeGenerator
             var isQuery = string.IsNullOrEmpty(isQueryLine) || isQueryLine.Equals("y");
 
             var isContainsResponse = true;
-            if (!isQuery)
+            if (isQuery)
             {
-                Console.WriteLine("Is is command with response (y/n) ? ");
-
-                var isContainsResponseLine = Console.ReadLine();
-                isContainsResponse = string.IsNullOrEmpty(isContainsResponseLine) || isContainsResponseLine.Equals("y");
+                isContainsResponse = true;
             }
             else
             {
-                isContainsResponse = !(methodHttpType ?? "").Equals("delete");
+                if ((methodHttpType ?? "").Equals("delete"))
+                {
+                    isContainsResponse = false;
+                }
+                else
+                {
+                    Console.WriteLine("Is is command with response (y/n) ? ");
+
+                    var isContainsResponseLine = Console.ReadLine();
+                    isContainsResponse = string.IsNullOrEmpty(isContainsResponseLine) || isContainsResponseLine.Equals("y");
+                }
             }
             
             Console.WriteLine("Write description for method (добавления событий мониторинга) : ");

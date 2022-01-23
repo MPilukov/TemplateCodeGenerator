@@ -7,6 +7,9 @@ using BaseNamespace;
 
 namespace TemplateCodeGenerator
 {
+    /// <summary>
+    /// Генератор нового апи-метода
+    /// </summary>
     public class NewMethodGenerator
     {
         /// <summary>
