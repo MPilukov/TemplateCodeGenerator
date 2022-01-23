@@ -21,11 +21,17 @@ namespace TemplateCodeGenerator
 
         private static void GenerateNewMethodInController()
         {
-            Console.WriteLine("Write controller file path : ");
+            Console.WriteLine("Write controller file full path : ");
             var controllerPath = Console.ReadLine();
             
             Console.WriteLine("Write new method name (RecalculationMonitoringOperationsByEndDateAsync) : ");
             var methodName = Console.ReadLine();
+            
+            Console.WriteLine("Choose an method type (post, get, delete) : ");
+            var methodHttpType = Console.ReadLine();
+            
+            Console.WriteLine("Write uri in controller (\"notification-recipient-role\") : ");
+            var url = Console.ReadLine();
             
             Console.WriteLine("It is query ? (y/n) :");
             var isQueryLine = Console.ReadLine();
@@ -39,12 +45,15 @@ namespace TemplateCodeGenerator
                 var isContainsResponseLine = Console.ReadLine();
                 isContainsResponse = string.IsNullOrEmpty(isContainsResponseLine) || isContainsResponseLine.Equals("y");
             }
+            else
+            {
+                isContainsResponse = !(methodHttpType ?? "").Equals("delete");
+            }
             
             Console.WriteLine("Write description for method (добавления событий мониторинга) : ");
             var description = Console.ReadLine();
 
-            var generator = new NewMethodGenerator();
-            NewMethodGenerator.Generate(controllerPath, methodName, isQuery, isContainsResponse, description);
+            NewMethodGenerator.Generate(controllerPath, url, methodHttpType, methodName, isQuery, isContainsResponse, description);
         }
     }
 }
